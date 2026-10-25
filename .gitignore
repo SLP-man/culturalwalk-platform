@@ -1,0 +1,35 @@
+# ---- Node / 前端 ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+coverage/
+playwright-report/
+test-results/
+
+# ---- Python / 后端 ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+
+# ---- 编辑器 / 系统 ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ---- 日志 / 临时 ----
+*.log
+tmp/
+.cache/

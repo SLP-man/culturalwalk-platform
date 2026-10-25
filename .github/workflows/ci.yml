@@ -1,0 +1,30 @@
+name: CI（骨架）
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查仓库基础文件
+        run: |
+          test -f README.md
+          test -f LICENSE
+          test -f CONTRIBUTING.md
+          echo "基础文件齐全"
+
+      # 以下两步会在对应代码生成后自动生效
+      - name: 前端检查（待代码生成）
+        if: hashFiles('apps/web-h5/package.json') != ''
+        run: |
+          echo "检测到 apps/web-h5/package.json，请在这里补：npm ci && npm run lint && npm run build"
+
+      - name: 后端检查（待代码生成）
+        if: hashFiles('services/api/pyproject.toml') != ''
+        run: |
+          echo "检测到 services/api/pyproject.toml，请在这里补：ruff check && pytest"
