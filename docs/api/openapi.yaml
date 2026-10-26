@@ -1,0 +1,1467 @@
+openapi: 3.1.0
+info:
+  title: CulturalWalk API
+  version: 2.0.0
+  description: |
+    文化行走平台接口契约。**本文件是唯一事实源**，前端类型由它生成。
+    约定见 docs/03-接口契约规范.md。
+servers:
+  - url: http://localhost:8000/api/v1
+    description: 本地开发
+  - url: https://api.example.com/api/v1
+    description: 演示环境（待部署）
+
+tags:
+  - name: auth
+  - name: users
+  - name: places
+  - name: drafts
+  - name: review
+  - name: routes
+  - name: community
+  - name: plans
+  - name: media
+  - name: notifications
+  - name: audit
+  - name: system
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      summary: 健康检查
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+                  version: { type: string }
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: 注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, minLength: 3, maxLength: 24 }
+                password: { type: string, minLength: 8 }
+                email: { type: string, format: email }
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Validation"
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: 刷新令牌
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: 新令牌对
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: 退出登录
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: 已退出 }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/me:
+    get:
+      tags: [users]
+      summary: 当前用户
+      responses:
+        "200":
+          description: 用户资料
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/{user_id}/profile:
+    get:
+      tags: [users]
+      summary: 用户公开主页
+      security: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: 主页数据
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserProfile" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /places:
+    get:
+      tags: [places]
+      summary: 地点列表
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: district
+          in: query
+          schema: { type: string }
+        - name: tag
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 地点分页
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Place" }
+                  next_cursor: { type: [string, "null"] }
+    post:
+      tags: [places]
+      summary: 新增地点（编辑）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceInput" }
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Place" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /places/{place_id}:
+    get:
+      tags: [places]
+      summary: 地点详情（含事实与来源）
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/PlaceId"
+      responses:
+        "200":
+          description: 地点
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceDetail" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /places/{place_id}/facts:
+    post:
+      tags: [places]
+      summary: 新增事实与来源（编辑）
+      parameters:
+        - $ref: "#/components/parameters/PlaceId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceFactInput" }
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceFact" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /route-drafts:
+    get:
+      tags: [drafts]
+      summary: 我的草稿列表
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 草稿分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RouteDraft" }
+                  next_cursor: { type: [string, "null"] }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [drafts]
+      summary: 新建草稿
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RouteDraftCreate" }
+      responses:
+        "201":
+          description: 已创建
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDraft" }
+
+  /route-drafts/{draft_id}:
+    parameters:
+      - $ref: "#/components/parameters/DraftId"
+    get:
+      tags: [drafts]
+      summary: 草稿详情
+      responses:
+        "200":
+          description: 草稿
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDraftDetail" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [drafts]
+      summary: 更新草稿
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RouteDraftPatch" }
+      responses:
+        "200":
+          description: 更新后
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDraft" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+    delete:
+      tags: [drafts]
+      summary: 删除草稿（仅 EDITING 且从未发布）
+      responses:
+        "204": { description: 已删除 }
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /route-drafts/{draft_id}/nodes:
+    put:
+      tags: [drafts]
+      summary: 整表替换节点顺序
+      parameters:
+        - $ref: "#/components/parameters/DraftId"
+        - $ref: "#/components/parameters/IfMatch"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nodes]
+              properties:
+                nodes:
+                  type: array
+                  items: { $ref: "#/components/schemas/RouteNodeInput" }
+      responses:
+        "200":
+          description: 替换后
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDraftDetail" }
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "422":
+          $ref: "#/components/responses/Validation"
+
+  /route-drafts/{draft_id}/submit:
+    post:
+      tags: [drafts]
+      summary: 提交审核
+      description: 冻结版本 + 建投稿 + 建审核任务 + 写审计，单事务。
+      parameters:
+        - $ref: "#/components/parameters/DraftId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: 投稿已创建
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Submission" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/Validation"
+
+  /route-drafts/{draft_id}/withdraw:
+    post:
+      tags: [drafts]
+      summary: 撤回投稿
+      parameters:
+        - $ref: "#/components/parameters/DraftId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: 撤回后草稿
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDraft" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /review/tasks:
+    get:
+      tags: [review]
+      summary: 审核队列
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [OPEN, CLAIMED, COMPLETED, CANCELLED]
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 任务分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReviewTask" }
+                  next_cursor: { type: [string, "null"] }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /review/tasks/{task_id}/claim:
+    post:
+      tags: [review]
+      summary: 领取任务
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: 已领取（含 lease_expires_at）
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewTask" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /review/tasks/{task_id}/release:
+    post:
+      tags: [review]
+      summary: 释放任务
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: 已释放
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewTask" }
+
+  /review/tasks/{task_id}/decision:
+    post:
+      tags: [review]
+      summary: 审核决定
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approve, request_changes, reject]
+                reason: { type: string, minLength: 10, maxLength: 1000 }
+      responses:
+        "200":
+          description: 决定后任务
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewTask" }
+        "403":
+          description: 不能审自己 / 非领取人
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          $ref: "#/components/responses/Validation"
+
+  /submissions/{submission_id}:
+    get:
+      tags: [review]
+      summary: 投稿详情（含版本快照，用于 diff）
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+      responses:
+        "200":
+          description: 投稿
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionDetail" }
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /submissions/{submission_id}/publish:
+    post:
+      tags: [review]
+      summary: 发布
+      parameters:
+        - $ref: "#/components/parameters/SubmissionId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version_id, content_hash]
+              properties:
+                version_id: { type: string, format: uuid }
+                content_hash: { type: string }
+      responses:
+        "201":
+          description: 已发布
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Publication" }
+        "409":
+          description: 版本或 hash 不匹配
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /publications/{publication_id}/unpublish:
+    post:
+      tags: [review]
+      summary: 下线
+      parameters:
+        - name: publication_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: 已下线
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Publication" }
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /routes:
+    get:
+      tags: [routes]
+      summary: 公开路线列表
+      security: []
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: theme
+          in: query
+          schema: { type: string }
+        - name: duration
+          in: query
+          description: 例如 0-120 / 120-240
+          schema: { type: string }
+        - name: budget_max
+          in: query
+          description: 分
+          schema: { type: integer }
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [official, user]
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 路线分页（只含已发布）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RouteSummary" }
+                  next_cursor: { type: [string, "null"] }
+
+  /routes/{route_id}:
+    get:
+      tags: [routes]
+      summary: 公开路线详情
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+        - name: If-None-Match
+          in: header
+          schema: { type: string }
+      responses:
+        "200":
+          description: 路线详情
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RouteDetail" }
+        "304": { description: 未变更 }
+        "404":
+          description: 不存在或未发布（两者同码，防信息泄露）
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /routes/{route_id}/versions:
+    get:
+      tags: [routes]
+      summary: 版本历史（管理端）
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+      responses:
+        "200":
+          description: 版本列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RouteVersion" }
+
+  /routes/{route_id}/comments:
+    get:
+      tags: [community]
+      summary: 评论列表
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 评论分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Comment" }
+                  next_cursor: { type: [string, "null"] }
+    post:
+      tags: [community]
+      summary: 发表评论
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "201":
+          description: 已发表
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /comments/{comment_id}/pin:
+    post:
+      tags: [community]
+      summary: 作者置顶评论
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: 置顶结果
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /routes/{route_id}/favorite:
+    post:
+      tags: [community]
+      summary: 收藏
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: 已收藏（幂等） }
+    delete:
+      tags: [community]
+      summary: 取消收藏
+      parameters:
+        - $ref: "#/components/parameters/RouteId"
+      responses:
+        "204": { description: 已取消（幂等） }
+
+  /plans:
+    get:
+      tags: [plans]
+      summary: 我的行程列表
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 行程分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Plan" }
+                  next_cursor: { type: [string, "null"] }
+    post:
+      tags: [plans]
+      summary: 提交规划（异步）
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlanInput" }
+      responses:
+        "202":
+          description: 已接受，返回 run 状态
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Plan" }
+        "422":
+          description: 输入不完整或非法
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /plans/{plan_id}:
+    get:
+      tags: [plans]
+      summary: 行程详情（含生成进度）
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: 行程
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlanDetail" }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [plans]
+      summary: 删除行程
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "204": { description: 已删除 }
+
+  /plans/{plan_id}/to-draft:
+    post:
+      tags: [plans]
+      summary: 行程转为路线草稿
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "201":
+          description: 已生成草稿
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [draft_id]
+                properties:
+                  draft_id: { type: string, format: uuid }
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /media/intent:
+    post:
+      tags: [media]
+      summary: 申请上传
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, mime, size]
+              properties:
+                filename: { type: string }
+                mime: { type: string, enum: [image/jpeg, image/png, image/webp] }
+                size: { type: integer, maximum: 10485760 }
+      responses:
+        "201":
+          description: 上传意图
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaIntent" }
+        "422":
+          $ref: "#/components/responses/Validation"
+
+  /media/{media_id}/complete:
+    post:
+      tags: [media]
+      summary: 通知上传完成
+      parameters:
+        - name: media_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: 已入队扫描
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+
+  /media/{media_id}:
+    get:
+      tags: [media]
+      summary: 媒体状态
+      parameters:
+        - name: media_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: 媒体
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: 我的通知
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 通知分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Notification" }
+                  next_cursor: { type: [string, "null"] }
+
+  /notifications/{notification_id}/read:
+    post:
+      tags: [notifications]
+      summary: 标记已读
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "204": { description: 已读 }
+
+  /audit-logs:
+    get:
+      tags: [audit]
+      summary: 审计查询（管理员）
+      parameters:
+        - name: object_type
+          in: query
+          schema: { type: string }
+        - name: object_id
+          in: query
+          schema: { type: string }
+        - name: actor_id
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: 审计分页
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditLog" }
+                  next_cursor: { type: [string, "null"] }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: 传草稿的 lock_version
+      schema: { type: integer }
+    RouteId:
+      name: route_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DraftId:
+      name: draft_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PlaceId:
+      name: place_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SubmissionId:
+      name: submission_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PlanId:
+      name: plan_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: 未登录或令牌过期
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: 不存在或不可见
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: 状态冲突
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    PreconditionFailed:
+      description: 并发冲突（lock_version 不匹配）
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Validation:
+      description: 校验失败
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: ROUTE_NOT_PUBLISHED }
+            message: { type: string }
+            request_id: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  reason: { type: string }
+
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token, user]
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        expires_in: { type: integer, example: 900 }
+        user: { $ref: "#/components/schemas/User" }
+
+    User:
+      type: object
+      required: [id, username, role]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        role: { type: string, enum: [user, editor, admin] }
+        bio: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    UserProfile:
+      type: object
+      required: [user, published_routes]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        published_routes:
+          type: array
+          items: { $ref: "#/components/schemas/RouteSummary" }
+        comment_count: { type: integer }
+
+    Place:
+      type: object
+      required: [id, name, lat, lon]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        district: { type: [string, "null"] }
+        lat: { type: number }
+        lon: { type: number }
+        summary: { type: [string, "null"] }
+        culture_tags:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [draft, verified] }
+
+    PlaceDetail:
+      allOf:
+        - $ref: "#/components/schemas/Place"
+        - type: object
+          properties:
+            facts:
+              type: array
+              items: { $ref: "#/components/schemas/PlaceFact" }
+            open_hours: { type: [string, "null"] }
+            open_hours_verified_at: { type: [string, "null"], format: date-time }
+
+    PlaceInput:
+      type: object
+      required: [name, lat, lon]
+      properties:
+        name: { type: string }
+        district: { type: string }
+        lat: { type: number }
+        lon: { type: number }
+        summary: { type: string }
+        culture_tags:
+          type: array
+          items: { type: string }
+
+    PlaceFact:
+      type: object
+      required: [id, claim, confidence]
+      properties:
+        id: { type: string, format: uuid }
+        claim: { type: string }
+        confidence: { type: string, enum: [verified, likely, unverified] }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+
+    PlaceFactInput:
+      type: object
+      required: [claim, confidence]
+      properties:
+        claim: { type: string }
+        confidence: { type: string, enum: [verified, likely, unverified] }
+        source:
+          $ref: "#/components/schemas/Source"
+
+    Source:
+      type: object
+      properties:
+        title: { type: string }
+        url: { type: [string, "null"] }
+        publisher: { type: [string, "null"] }
+
+    RouteNodeInput:
+      type: object
+      required: [place_id, stay_minutes]
+      properties:
+        place_id: { type: string, format: uuid }
+        stay_minutes: { type: integer, minimum: 10, maximum: 480 }
+        transport: { type: string, enum: [walk, metro, bus, taxi, bike] }
+        note: { type: [string, "null"] }
+        price_min: { type: [integer, "null"], description: 分 }
+        price_max: { type: [integer, "null"], description: 分 }
+        media_asset_ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    RouteDraftCreate:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, maxLength: 60 }
+        summary: { type: string, maxLength: 300 }
+        theme_tags:
+          type: array
+          items: { type: string }
+        duration_minutes: { type: integer }
+
+    RouteDraftPatch:
+      type: object
+      properties:
+        title: { type: string, maxLength: 60 }
+        summary: { type: string, maxLength: 300 }
+        theme_tags:
+          type: array
+          items: { type: string }
+        duration_minutes: { type: integer }
+
+    RouteDraft:
+      type: object
+      required: [id, title, state, lock_version]
+      properties:
+        id: { type: string, format: uuid }
+        route_id: { type: string, format: uuid }
+        title: { type: string }
+        summary: { type: [string, "null"] }
+        state: { type: string, enum: [EDITING, SUBMITTED_LOCKED, APPROVED_LOCKED, ARCHIVED] }
+        lock_version: { type: integer }
+        base_version_id: { type: [string, "null"], format: uuid }
+        updated_at: { type: string, format: date-time }
+
+    RouteDraftDetail:
+      allOf:
+        - $ref: "#/components/schemas/RouteDraft"
+        - type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                type: object
+                properties:
+                  position: { type: integer }
+                  place: { $ref: "#/components/schemas/Place" }
+                  stay_minutes: { type: integer }
+                  transport: { type: string }
+                  note: { type: [string, "null"] }
+                  price_min: { type: [integer, "null"] }
+                  price_max: { type: [integer, "null"] }
+            cost:
+              $ref: "#/components/schemas/CostSummary"
+
+    CostSummary:
+      type: object
+      properties:
+        min_total: { type: integer }
+        max_total: { type: integer }
+        currency: { type: string, default: CNY }
+        unknown_count: { type: integer, description: 缺价格的节点数 }
+
+    RouteSummary:
+      type: object
+      required: [id, title, channel]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        summary: { type: [string, "null"] }
+        cover_url: { type: [string, "null"] }
+        channel: { type: string, enum: [official, user] }
+        author:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            username: { type: string }
+        theme_tags:
+          type: array
+          items: { type: string }
+        duration_minutes: { type: [integer, "null"] }
+        cost: { $ref: "#/components/schemas/CostSummary" }
+        comment_count: { type: integer }
+        favorite_count: { type: integer }
+
+    RouteDetail:
+      allOf:
+        - $ref: "#/components/schemas/RouteSummary"
+        - type: object
+          properties:
+            version_id: { type: string, format: uuid }
+            content_hash: { type: string }
+            published_at: { type: string, format: date-time }
+            days:
+              type: array
+              items:
+                type: object
+                properties:
+                  day_index: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        position: { type: integer }
+                        start_time: { type: [string, "null"] }
+                        stay_minutes: { type: integer }
+                        transport: { type: string }
+                        place: { $ref: "#/components/schemas/PlaceDetail" }
+                        price_min: { type: [integer, "null"] }
+                        price_max: { type: [integer, "null"] }
+                        confidence: { type: string, enum: [verified, likely, unverified] }
+            is_favorited: { type: boolean }
+
+    RouteVersion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        version_no: { type: integer }
+        content_hash: { type: string }
+        created_at: { type: string, format: date-time }
+        created_by: { type: string, format: uuid }
+
+    Submission:
+      type: object
+      required: [id, state]
+      properties:
+        id: { type: string, format: uuid }
+        route_id: { type: string, format: uuid }
+        version_id: { type: string, format: uuid }
+        content_hash: { type: string }
+        state:
+          type: string
+          enum: [PENDING_REVIEW, CHANGES_REQUESTED, REJECTED, APPROVED, WITHDRAWN, SUPERSEDED]
+        note: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    SubmissionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Submission"
+        - type: object
+          properties:
+            snapshot: { type: object, additionalProperties: true }
+            previous_snapshot:
+              type: [object, "null"]
+              additionalProperties: true
+            author:
+              type: object
+              properties:
+                id: { type: string, format: uuid }
+                username: { type: string }
+
+    ReviewTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        submission_id: { type: string, format: uuid }
+        state: { type: string, enum: [OPEN, CLAIMED, COMPLETED, CANCELLED] }
+        assignee_id: { type: [string, "null"], format: uuid }
+        lease_expires_at: { type: [string, "null"], format: date-time }
+        completed_action: { type: [string, "null"], enum: [approve, request_changes, reject, null] }
+        created_at: { type: string, format: date-time }
+
+    Publication:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        route_id: { type: string, format: uuid }
+        version_id: { type: string, format: uuid }
+        content_hash: { type: string }
+        state: { type: string, enum: [PUBLISHED, UNPUBLISHED, ARCHIVED] }
+        published_at: { type: [string, "null"], format: date-time }
+        unpublished_reason: { type: [string, "null"] }
+
+    Comment:
+      type: object
+      required: [id, body]
+      properties:
+        id: { type: string, format: uuid }
+        route_id: { type: string, format: uuid }
+        body: { type: string }
+        pinned: { type: boolean }
+        author:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            username: { type: string }
+        created_at: { type: string, format: date-time }
+
+    PlanInput:
+      type: object
+      required: [city, days, people, budget_total]
+      properties:
+        city: { type: string, example: changsha }
+        days: { type: integer, minimum: 1, maximum: 7 }
+        people: { type: integer, minimum: 1, maximum: 12 }
+        budget_total: { type: integer, description: 分，全队总额 }
+        include_lodging: { type: boolean, default: false }
+        day_parts:
+          type: array
+          items: { type: string, enum: [morning, afternoon, evening] }
+        themes:
+          type: array
+          items: { type: string }
+        transport:
+          type: array
+          items: { type: string, enum: [walk, metro, bus, taxi, bike] }
+        pace: { type: string, enum: [relaxed, normal, packed] }
+        start_point:
+          type: object
+          properties:
+            lat: { type: number }
+            lon: { type: number }
+            label: { type: string }
+
+    Plan:
+      type: object
+      required: [id, state]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [DRAFT, GENERATING, READY, FAILED] }
+        city: { type: string }
+        days: { type: integer }
+        people: { type: integer }
+        budget_total: { type: integer }
+        share_token: { type: [string, "null"] }
+        error_code: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
+    PlanDetail:
+      allOf:
+        - $ref: "#/components/schemas/Plan"
+        - type: object
+          properties:
+            steps:
+              type: array
+              items:
+                type: object
+                properties:
+                  agent: { type: string, enum: [researcher, planner, critic, verifier] }
+                  status: { type: string, enum: [pending, running, done, failed] }
+                  duration_ms: { type: [integer, "null"] }
+            cost:
+              $ref: "#/components/schemas/CostSummary"
+            days_plan:
+              type: array
+              items:
+                type: object
+                properties:
+                  day_index: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        order: { type: integer }
+                        place: { $ref: "#/components/schemas/Place" }
+                        stay_minutes: { type: integer }
+                        transport: { type: string }
+                        price_min: { type: [integer, "null"] }
+                        price_max: { type: [integer, "null"] }
+                        confidence: { type: string, enum: [verified, likely, unverified] }
+                        reason: { type: string }
+
+    MediaIntent:
+      type: object
+      properties:
+        asset_id: { type: string, format: uuid }
+        upload_url: { type: string }
+        fields: { type: object, additionalProperties: true }
+        expires_at: { type: string, format: date-time }
+
+    MediaAsset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        zone: { type: string, enum: [quarantine, clean] }
+        scan_state: { type: string, enum: [pending, scanning, clean, rejected] }
+        url: { type: [string, "null"] }
+        width: { type: [integer, "null"] }
+        height: { type: [integer, "null"] }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, example: review_request_changes }
+        payload: { type: object, additionalProperties: true }
+        read_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actor:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            username: { type: string }
+        action: { type: string, example: publication.publish }
+        object_type: { type: string }
+        object_id: { type: string }
+        before_hash: { type: [string, "null"] }
+        after_hash: { type: [string, "null"] }
+        reason: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }

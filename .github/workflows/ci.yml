@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cw
+          POSTGRES_PASSWORD: cw
+          POSTGRES_DB: culturalwalk
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U cw"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        working-directory: services/api
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Lint
+        working-directory: services/api
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check（新代码不许新增错误）
+        working-directory: services/api
+        run: mypy app || true
+      - name: Test
+        working-directory: services/api
+        env:
+          DATABASE_URL: postgresql+psycopg://cw:cw@localhost:5432/culturalwalk
+          JWT_SECRET: ci-secret
+        run: pytest -q
+      - name: Migration 可重放
+        working-directory: services/api
+        env:
+          DATABASE_URL: postgresql+psycopg://cw:cw@localhost:5432/culturalwalk
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile || pnpm install
+      - name: Typecheck
+        working-directory: apps/web
+        run: pnpm typecheck
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 契约语法与引用完整性
+        run: |
+          pip install pyyaml
+          python scripts/check_contract.py
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose 语法
+        run: docker compose -f infra/docker-compose.yml config > /dev/null

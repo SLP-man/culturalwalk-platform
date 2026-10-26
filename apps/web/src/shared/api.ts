@@ -1,0 +1,82 @@
+/**
+ * 统一请求封装。页面里不要直接 fetch。
+ *
+ * 约定（见 docs/03-接口契约规范.md）：
+ * - 前缀 /api/v1，由 vite 代理到后端
+ * - 写操作自动带 Idempotency-Key
+ * - 非 2xx 抛 ApiError，页面按 code 分支而不是 message 文案
+ */
+
+export interface ApiErrorBody {
+  error: { code: string; message: string; request_id?: string; details?: unknown[] }
+}
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly requestId?: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+const BASE = '/api/v1'
+
+function uuid(): string {
+  return crypto.randomUUID()
+}
+
+let accessToken: string | null = localStorage.getItem('cw_token')
+export function setToken(token: string | null): void {
+  accessToken = token
+  if (token) localStorage.setItem('cw_token', token)
+  else localStorage.removeItem('cw_token')
+}
+
+export async function request<T>(
+  path: string,
+  init: RequestInit & { idempotent?: boolean } = {},
+): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set('Accept', 'application/json')
+  if (init.body) headers.set('Content-Type', 'application/json')
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
+  const isWrite = (init.method ?? 'GET').toUpperCase() !== 'GET'
+  if (init.idempotent ?? isWrite) {
+    headers.set('Idempotency-Key', uuid())
+  }
+
+  const res = await fetch(BASE + path, { ...init, headers })
+
+  if (res.status === 204) return undefined as T
+
+  const text = await res.text()
+  const data = text ? JSON.parse(text) : null
+
+  if (!res.ok) {
+    const err = data as ApiErrorBody | null
+    throw new ApiError(
+      res.status,
+      err?.error.code ?? 'UNKNOWN',
+      err?.error.message ?? `请求失败（${res.status}）`,
+      err?.error.request_id,
+    )
+  }
+  return data as T
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(path: string, body: unknown, lockVersion: number) =>
+    request<T>(path, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      headers: { 'If-Match': String(lockVersion) },
+    }),
+  del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+}

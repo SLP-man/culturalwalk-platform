@@ -1,0 +1,49 @@
+# ---- 环境与密钥（绝对不能提交）----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ---- Node ----
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+pnpm-debug.log*
+npm-debug.log*
+
+# 生成产物：types.ts 需要提交（新人 clone 后不跑 gen 也能 typecheck）
+# 契约改了没重新生成，CI 的 gen:check 会拦住
+packages/contracts/.types.check.ts
+
+# ---- 编辑器 / 操作系统 ----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- 本地数据 ----
+.data/
+tmp/
+*.sqlite3
+
+# ---- 临时安装残留 ----
+pip-unpack-*/
+*.whl

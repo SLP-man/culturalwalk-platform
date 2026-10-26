@@ -1,0 +1,8 @@
+# 统一换行，避免 Windows 成员的 CRLF 把整个仓库刷成 diff
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

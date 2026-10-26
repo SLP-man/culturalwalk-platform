@@ -1,0 +1,13 @@
+# 单仓库多包：前端 app 与契约类型包
+packages:
+  - 'apps/web'
+  - 'packages/contracts'
+
+# pnpm 10+ 默认不执行依赖的构建脚本。esbuild 的 preinstall 只是校验平台二进制，
+# 真正的二进制来自可选依赖 @esbuild/win32-x64（或对应平台包），因此这里放行即可。
+onlyBuiltDependencies:
+  - esbuild
+
+# 跑脚本前不再重跑一次 install 检查；本地/CI 都先显式 install 过。
+# 否则每次 pnpm build 都会因为上面那条 ignored-builds 提示而看起来"失败"。
+verifyDepsBeforeRun: false

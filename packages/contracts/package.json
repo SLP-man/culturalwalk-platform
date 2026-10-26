@@ -1,0 +1,14 @@
+{
+  "name": "@cw/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "由 docs/api/openapi.yaml 生成的 TS 类型。禁止手改 src/types.ts。",
+  "scripts": {
+    "gen": "node gen.mjs",
+    "gen:check": "node gen.mjs --check"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.4.1"
+  }
+}
