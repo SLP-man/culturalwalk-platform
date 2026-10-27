@@ -157,7 +157,7 @@ def card_body(card: dict) -> str:
 
 ## 遇到卡壳
 
-先看 [`docs/04-新手入门指南.md`](../blob/main/docs/04-新手入门指南.md) 的「常见报错」一节；还不行就在本 issue 下写清楚「我做了什么 / 期望什么 / 实际什么」。
+先看 [`docs/必读2-零基础全流程.md`](../blob/main/docs/必读2-零基础全流程.md) 的「常见报错」一节；还不行就在本 issue 下写清楚「我做了什么 / 期望什么 / 实际什么」。
 
 <sub>由 `tasks/cards.yml` 自动生成——改任务请改 `docs/01-模块与任务看板.md` 后重跑 `python scripts/gen_cards.py`。</sub>"""
 

@@ -2,7 +2,7 @@
 
 > **不想读文件？** 任务已经全部建成了 GitHub Issues，直接去
 > <https://github.com/SLP-man/culturalwalk-platform/issues?q=is%3Aissue> 挑一张，点 **Assign yourself** 就行。
-> 第一次上手先看 [`docs/06-新手入门指南.md`](../docs/06-新手入门指南.md)。
+> 第一次上手先看 [`docs/必读2-零基础全流程.md`](../docs/必读2-零基础全流程.md)。
 
 这里的文件都由脚本生成，**不要手改**：
 
