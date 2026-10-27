@@ -102,16 +102,18 @@ culturalwalk-platform/
 
 ## 5. 怎么认领工作
 
-```bash
-bash scripts/create_issues.sh --dry-run   # 看会建哪些 issue
-bash scripts/create_issues.sh             # 真的建
-```
+任务卡**已经全部建成 GitHub Issues（57 条）**：<https://github.com/SLP-man/culturalwalk-platform/issues?q=is%3Aissue>
 
-然后去 issue 列表挑一张，回一句「我来」。每张卡都是三行格式：**输入 / 输出 / 验收** —— 验收不通过不算完成。
+1. 打开 Issues，用标签筛自己的模块，比如 `label:identity`、`label:M1`；
+2. 在右侧 **Assignees** 里点 *assign yourself*，这张卡就是你的了；
+3. 开 PR 时正文写 `Closes #12`，合并后 issue 自动关闭，看板自动推进。
 
-不想用 issue 也行，打开 [`tasks/认领清单.md`](tasks/认领清单.md)，照「输出 / 验收」两栏自己建文件。
+M0 的 6 张卡（骨架 / 后端骨架 / 前端骨架 / CI / 契约链路 / 一键启动）已在初始提交完成，已关闭并附证据评论；
+`M0-07 种子数据脚本` 还空着，适合当第一张练手卡。
 
-任务卡的来源是看板：改 `docs/01-模块与任务看板.md` 的表格 → `python scripts/gen_cards.py` 重新生成三个产物。
+刚接触这个项目？先读 [**`docs/06-新手入门指南.md`**](docs/06-新手入门指南.md)（零基础版：名词解释 → 跑起来 → 认领 → 开 PR → 不出错清单）。
+
+改了看板要补建 issue 时：`python scripts/create_issues.py --dry-run` 先看，去掉 `--dry-run` 真建（同标题跳过，可反复跑）。
 
 ## 6. 开发范式（几条硬规矩）
 

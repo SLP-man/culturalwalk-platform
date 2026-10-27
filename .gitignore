@@ -47,3 +47,6 @@ tmp/
 # ---- 临时安装残留 ----
 pip-unpack-*/
 *.whl
+pip-build-tracker-*/
+pip-ephem-wheel-cache-*/
+pip-install-*/

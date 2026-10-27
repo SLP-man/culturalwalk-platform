@@ -2,7 +2,7 @@
 """从 docs/01-模块与任务看板.md 生成任务卡清单。
 
 产物三个，都别手改：
-- tasks/cards.json  —— 机读版，给 scripts/create_issues.sh 用
+- tasks/cards.json  —— 机读版，给 scripts/create_issues.py 用
 - tasks/cards.yml   —— 人读版，review 时看 diff 方便
 - tasks/认领清单.md —— 没装 gh/python 的组员照这个认领任务、建目录
 
