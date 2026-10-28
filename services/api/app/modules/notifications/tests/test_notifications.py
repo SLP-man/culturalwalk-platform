@@ -6,53 +6,16 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
-from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.core.db import Base, get_db
 from app.core.deps import create_access_token
-from app.main import create_app
 from app.modules.notifications.models import Notification
 
 ENDPOINT = "/api/v1/notifications"
-
-
-@pytest.fixture()
-def session_factory() -> Iterator[sessionmaker[Session]]:
-    engine: Engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    Base.metadata.create_all(engine)
-    yield sessionmaker(bind=engine, expire_on_commit=False)
-    engine.dispose()
-
-
-@pytest.fixture()
-def client(session_factory: sessionmaker[Session]) -> Iterator[TestClient]:
-    app = create_app()
-
-    def override_get_db() -> Iterator[Session]:
-        db = session_factory()
-        try:
-            yield db
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def _auth_headers(user_id: uuid.UUID) -> dict[str, str]:
