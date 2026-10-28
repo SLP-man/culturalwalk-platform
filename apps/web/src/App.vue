@@ -1,11 +1,14 @@
 <script setup lang="ts">
-// 全站壳：顶部标题 + 底部导航。登录态等全局状态后续放 shared/store.ts
-const tabs = [
-  { to: '/', label: '发现' },
-  { to: '/planner', label: '规划' },
-  { to: '/authoring', label: '创作' },
-  { to: '/me', label: '我的' },
-]
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+import { NAV_TABS } from '@/shared/nav'
+
+// 全站壳：顶部标题 + 底部 5 个主 tab。
+// 高亮哪个 tab 由路由的 meta.nav 决定，所以 /routes/:id、/authoring/:id 这类
+// 子路径也会留在所属 tab 上，而不是把底部导航全灭掉。
+const route = useRoute()
+const activeKey = computed(() => route.meta.nav ?? null)
 </script>
 
 <template>
@@ -19,9 +22,16 @@ const tabs = [
       <RouterView />
     </main>
 
-    <nav class="tabbar">
-      <RouterLink v-for="t in tabs" :key="t.to" :to="t.to" class="tab">
-        {{ t.label }}
+    <nav class="tabbar" aria-label="主导航">
+      <RouterLink
+        v-for="tab in NAV_TABS"
+        :key="tab.key"
+        :to="tab.to"
+        class="tab"
+        :class="{ active: activeKey === tab.key }"
+        :aria-current="activeKey === tab.key ? 'page' : undefined"
+      >
+        {{ tab.label }}
       </RouterLink>
     </nav>
   </div>
@@ -53,7 +63,7 @@ const tabs = [
   position: fixed;
   inset: auto 0 0 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-top: 1px solid var(--line);
   background: #fff;
   padding-bottom: env(safe-area-inset-bottom);
@@ -64,7 +74,7 @@ const tabs = [
   font-size: 14px;
   color: var(--muted);
 }
-.tab.router-link-active {
+.tab.active {
   color: var(--brand);
   font-weight: 600;
 }
