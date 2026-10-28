@@ -16,6 +16,12 @@ class NotificationsRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    def add(self, notification: Notification) -> Notification:
+        """落一条通知；只负责写入，要不要写由 service 判断。"""
+        self.db.add(notification)
+        self.db.flush()
+        return notification
+
     def list_for_user(
         self,
         user_id: uuid.UUID,
