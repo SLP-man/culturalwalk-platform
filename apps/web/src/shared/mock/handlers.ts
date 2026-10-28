@@ -369,6 +369,18 @@ const table: Array<[string, string, Handler]> = [
     return submission
   }],
 
+  ['GET', '/submissions/:submission_id', (_ctx, params) => {
+    const submission = state.submissions.find((item) => item.id === params.submission_id)
+    if (!submission) throw new MockError(404, 'SUBMISSION_NOT_FOUND', '提交不存在')
+    const queue = REVIEW_QUEUE.find((item) => item.submission.id === params.submission_id)
+    return {
+      ...submission,
+      snapshot: { title: queue?.routeTitle ?? '未命名路线', content: queue?.after ?? '' },
+      previous_snapshot: queue ? { content: queue.before } : null,
+      author: { id: 'u-001', username: queue?.authorName ?? '文化漫步者' },
+    }
+  }],
+
   ['GET', '/review/tasks', ({ query }) => {
     const wanted = query.get('state')
     const items = wanted
