@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
 from typing import Final
 
@@ -16,9 +17,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.errors import Conflict
-from app.modules.planner.models import Itinerary, PlanRun, PlanState
+from app.modules.planner.agents.base import PlaceSource
+from app.modules.planner.models import AgentStep, Itinerary, PlanRun, PlanState
+from app.modules.planner.orchestrator import AGENT_FAILED_CODE, Orchestrator, RunResult
+from app.modules.planner.orchestrator import context_from_itinerary as _context_from_itinerary
 from app.modules.planner.repository import PlannerRepository
 from app.modules.planner.schemas import PlanIn
+
+logger = logging.getLogger(__name__)
 
 # 状态机（docs/02 §3.5）：只有这三条边合法，表外的一切组合都拒绝。
 # 值那一列是"触发动作"，验收、审计日志、以后的事件名都复用它，
@@ -200,3 +206,39 @@ class PlannerService:
         """
         apply_transition(run, PlanState.FAILED, error_code=error_code)
         apply_transition(itinerary, PlanState.FAILED, error_code=error_code)
+
+    def run_agents(
+        self,
+        itinerary: Itinerary,
+        run: PlanRun,
+        *,
+        place_source: PlaceSource | None = None,
+    ) -> RunResult:
+        """跑完整条流水线，把每一步落成 agent_steps，再给行程和生成记录收尾。
+
+        PL-05 会把这段搬进异步任务；PL-03 先在请求线程里同步跑，
+        所以验收只看「四步都留痕、失败能定位到哪一站」，不看吞吐。
+        """
+        result = Orchestrator(place_source=place_source).run(_context_from_itinerary(itinerary))
+        for step in result.steps:
+            self.db.add(
+                AgentStep(
+                    run_id=run.id,
+                    agent=step.agent,
+                    status=step.status,
+                    output_digest=step.output_digest,
+                    duration_ms=step.duration_ms,
+                )
+            )
+        if result.ok:
+            self.finish_ready(itinerary, run)
+        else:
+            failed = result.failed_step
+            logger.warning(
+                "行程 %s 生成失败，卡在 %s：%s",
+                itinerary.id,
+                result.failed_agent,
+                failed.error if failed else "",
+            )
+            self.finish_failed(itinerary, run, error_code=result.error_code or AGENT_FAILED_CODE)
+        return result
