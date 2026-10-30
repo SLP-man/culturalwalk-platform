@@ -143,6 +143,7 @@ M0 的 6 张卡（骨架 / 后端骨架 / 前端骨架 / CI / 契约链路 / 一
 
 - 人 → [**`docs/必读2-零基础全流程.md`**](docs/必读2-零基础全流程.md)：零基础全流程（准备 → 领卡 → 和 AI 说话 → 验收 → 合并）
 - AI 助手 → [**`docs/必读1-开发约定.md`**](docs/必读1-开发约定.md)：一页纸讲完全部规矩，丢给 agent 就能开工
+- 出问题时 → [**`docs/问题与回滚台账.md`**](docs/问题与回滚台账.md)：记录每个坑 + 回滚命令（`bash scripts/preflight.sh` 是提交前自检）
 
 改了看板要补建 issue 时：`python scripts/create_issues.py --dry-run` 先看，去掉 `--dry-run` 真建（同标题跳过，可反复跑）。
 

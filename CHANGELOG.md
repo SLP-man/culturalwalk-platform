@@ -1,3 +1,6 @@
+## 2026-10-30
+
+- 工程：新增 `scripts/preflight.sh`（一条命令跑后端 lint/测试、前端 typecheck/单测/构建、契约自检）；必读1 §2 修正为**真实可复制**的命令（仓库根没有 package.json，原 `pnpm typecheck` 等命令不存在）；新增 `docs/问题与回滚台账.md`（问题记录 + 回滚三板斧 + 基线 tag）。
 # 变更记录
 
 按时间倒序。每次合并到 main 前在 PR 里追加一行。
