@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Annotated
 
+from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -36,3 +38,7 @@ def get_db() -> Iterator[Session]:
         raise
     finally:
         db.close()
+
+
+# router 里统一写 `db: DbDep`，不许自己在端点里 new Session。
+DbDep = Annotated[Session, Depends(get_db)]
