@@ -8,6 +8,7 @@
  */
 
 import { MockError, handleMock } from './mock/handlers'
+import { readItem, removeItem, writeItem } from './storage'
 
 export interface ApiErrorBody {
   error: { code: string; message: string; request_id?: string; details?: unknown[] }
@@ -39,11 +40,11 @@ function uuid(): string {
   return crypto.randomUUID()
 }
 
-let accessToken: string | null = localStorage.getItem('cw_token')
+let accessToken: string | null = readItem('cw_token')
 export function setToken(token: string | null): void {
   accessToken = token
-  if (token) localStorage.setItem('cw_token', token)
-  else localStorage.removeItem('cw_token')
+  if (token) writeItem('cw_token', token)
+  else removeItem('cw_token')
 }
 
 export async function request<T>(
@@ -79,7 +80,19 @@ export async function request<T>(
   if (res.status === 204) return undefined as T
 
   const text = await res.text()
-  const data = text ? JSON.parse(text) : null
+  let data: unknown = null
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      // 网关/nginx 出错时返回的是 HTML，不能让页面崩在 JSON.parse 上
+      throw new ApiError(
+        res.status,
+        'BAD_RESPONSE',
+        res.ok ? '响应格式不是 JSON' : `请求失败（${res.status}）`,
+      )
+    }
+  }
 
   if (!res.ok) {
     const err = data as ApiErrorBody | null
