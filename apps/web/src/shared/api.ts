@@ -7,6 +7,8 @@
  * - 非 2xx 抛 ApiError，页面按 code 分支而不是 message 文案
  */
 
+import { MockError, handleMock } from './mock/handlers'
+
 export interface ApiErrorBody {
   error: { code: string; message: string; request_id?: string; details?: unknown[] }
 }
@@ -24,6 +26,14 @@ export class ApiError extends Error {
 }
 
 const BASE = '/api/v1'
+
+/**
+ * 假数据开关。开发环境默认开，接口就绪后设 VITE_USE_MOCK=false 即可走真接口。
+ * 页面永远只调 api.get/post/patch/del，不要自己判断 USE_MOCK。
+ */
+const mockFlag = import.meta.env.VITE_USE_MOCK
+export const USE_MOCK =
+  mockFlag === 'true' ? true : mockFlag === 'false' ? false : import.meta.env.DEV
 
 function uuid(): string {
   return crypto.randomUUID()
@@ -47,6 +57,21 @@ export async function request<T>(
   const isWrite = (init.method ?? 'GET').toUpperCase() !== 'GET'
   if (init.idempotent ?? isWrite) {
     headers.set('Idempotency-Key', uuid())
+  }
+
+  const method = (init.method ?? 'GET').toUpperCase()
+  if (USE_MOCK) {
+    const [pathname, search] = path.split('?')
+    const query = new URLSearchParams(search ?? '')
+    const body = init.body ? JSON.parse(String(init.body)) : undefined
+    try {
+      return await handleMock<T>(method, pathname, query, body, accessToken)
+    } catch (error) {
+      if (error instanceof MockError) {
+        throw new ApiError(error.status, error.code, error.message)
+      }
+      throw error
+    }
   }
 
   const res = await fetch(BASE + path, { ...init, headers })
