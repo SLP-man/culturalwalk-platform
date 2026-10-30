@@ -75,6 +75,8 @@ jobs:
         run: pnpm install --frozen-lockfile || pnpm install
       - name: Typecheck
         run: pnpm -C apps/web typecheck
+      - name: Unit tests
+        run: pnpm -C apps/web test
       - name: Build
         run: pnpm -C apps/web build
 
