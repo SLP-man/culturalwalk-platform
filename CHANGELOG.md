@@ -4,7 +4,7 @@
 
 | 日期 | 范围 | 变更 | 负责人 |
 | --- | --- | --- | --- |
-| 2026-10-30 | FE/QA | 前端单测进 CI（`pnpm -C apps/web test`）；补共享层/路由/审核状态/三个页面冒烟测试，共 21 文件 125 例；修复无 `localStorage` 环境 import 即崩、非 JSON 响应解析崩溃；必读1/CONTRIBUTING/00 同步测试底线 | P1 |
+| 2026-10-30 | FE/QA | 前端单测进 CI（`pnpm -C apps/web test`）；补共享层/路由/审核状态/三个页面冒烟测试，共 22 文件 128 例；修复无 `localStorage` 环境 import 即崩、非 JSON 响应解析崩溃；必读1/CONTRIBUTING/00 同步测试底线 | P1 |
 | 2026-10-30 | M0 | 仓库迁到组织 `sit-rhg`（显示名 CulturalWalk）；必读1/必读2/00/CONTRIBUTING 同步新地址、组员找仓库与旧克隆改远端说明 | P1 |
 | 2026-10-27 | M0 | 任务卡改由看板生成（cards.json / cards.yml / 认领清单.md），人天配平 107.5 | P1 |
 | 2026-10-27 | M0 | 新增 `discovery` 只读模块；角色分工三处文档对齐 | P1 |
