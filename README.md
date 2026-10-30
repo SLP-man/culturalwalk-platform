@@ -130,7 +130,7 @@ culturalwalk-platform/
 
 ## 5. 怎么认领工作
 
-任务卡**已经全部建成 GitHub Issues（57 条）**：<https://github.com/SLP-man/culturalwalk-platform/issues?q=is%3Aissue>
+任务卡**已经全部建成 GitHub Issues（57 条）**：<https://github.com/sit-rhg/culturalwalk-platform/issues?q=is%3Aissue>
 
 1. 打开 Issues，用标签筛自己的模块，比如 `label:identity`、`label:M1`；
 2. 在右侧 **Assignees** 里点 *assign yourself*，这张卡就是你的了；

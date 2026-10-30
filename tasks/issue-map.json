@@ -2,286 +2,286 @@
   "CA-01": {
     "number": 12,
     "title": "[CA-01] 地点与来源模型",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/12"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/12"
   },
   "CA-02": {
     "number": 13,
     "title": "[CA-02] 长沙种子数据",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/13"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/13"
   },
   "CA-03": {
     "number": 14,
     "title": "[CA-03] 地点查询接口",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/14"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/14"
   },
   "CA-04": {
     "number": 15,
     "title": "[CA-04] 地理编码 Adapter",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/15"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/15"
   },
   "CM-01": {
     "number": 30,
     "title": "[CM-01] 评论",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/30"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/30"
   },
   "CM-02": {
     "number": 31,
     "title": "[CM-02] 作者置顶",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/31"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/31"
   },
   "CM-03": {
     "number": 32,
     "title": "[CM-03] 收藏",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/32"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/32"
   },
   "DS-01": {
     "number": 26,
     "title": "[DS-01] 公开列表",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/26"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/26"
   },
   "DS-02": {
     "number": 27,
     "title": "[DS-02] 筛选",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/27"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/27"
   },
   "DS-03": {
     "number": 28,
     "title": "[DS-03] 关键词搜索",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/28"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/28"
   },
   "DS-04": {
     "number": 29,
     "title": "[DS-04] 公开详情",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/29"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/29"
   },
   "FE-01": {
     "number": 45,
     "title": "[FE-01] 布局与路由",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/45"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/45"
   },
   "FE-02": {
     "number": 46,
     "title": "[FE-02] 浏览列表页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/46"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/46"
   },
   "FE-03": {
     "number": 47,
     "title": "[FE-03] 路线详情页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/47"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/47"
   },
   "FE-04": {
     "number": 48,
     "title": "[FE-04] 登录注册页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/48"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/48"
   },
   "FE-05": {
     "number": 49,
     "title": "[FE-05] 创作页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/49"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/49"
   },
   "FE-06": {
     "number": 50,
     "title": "[FE-06] 我的路线与提交",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/50"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/50"
   },
   "FE-07": {
     "number": 51,
     "title": "[FE-07] 规划页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/51"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/51"
   },
   "FE-08": {
     "number": 52,
     "title": "[FE-08] 管理端审核队列",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/52"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/52"
   },
   "FE-09": {
     "number": 53,
     "title": "[FE-09] 个人主页",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/53"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/53"
   },
   "ID-01": {
     "number": 8,
     "title": "[ID-01] 用户与会话表",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/8"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/8"
   },
   "ID-02": {
     "number": 9,
     "title": "[ID-02] 注册/登录/退出",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/9"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/9"
   },
   "ID-03": {
     "number": 10,
     "title": "[ID-03] 角色与权限依赖",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/10"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/10"
   },
   "ID-04": {
     "number": 11,
     "title": "[ID-04] 个人主页接口",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/11"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/11"
   },
   "M0-01": {
     "number": 1,
     "title": "[M0-01] 仓库骨架与目录",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/1"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/1"
   },
   "M0-02": {
     "number": 2,
     "title": "[M0-02] 本地一键启动",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/2"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/2"
   },
   "M0-03": {
     "number": 3,
     "title": "[M0-03] 后端骨架",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/3"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/3"
   },
   "M0-04": {
     "number": 4,
     "title": "[M0-04] 前端骨架",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/4"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/4"
   },
   "M0-05": {
     "number": 5,
     "title": "[M0-05] CI 流水线",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/5"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/5"
   },
   "M0-06": {
     "number": 6,
     "title": "[M0-06] 契约生成链路",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/6"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/6"
   },
   "M0-07": {
     "number": 7,
     "title": "[M0-07] 种子数据脚本",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/7"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/7"
   },
   "MD-01": {
     "number": 21,
     "title": "[MD-01] 提交事务",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/21"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/21"
   },
   "MD-02": {
     "number": 22,
     "title": "[MD-02] 审核队列与租约",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/22"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/22"
   },
   "MD-03": {
     "number": 23,
     "title": "[MD-03] 通过/退回/拒绝",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/23"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/23"
   },
   "MD-04": {
     "number": 24,
     "title": "[MD-04] 发布与下线",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/24"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/24"
   },
   "MD-05": {
     "number": 25,
     "title": "[MD-05] 审计写入",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/25"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/25"
   },
   "ME-01": {
     "number": 40,
     "title": "[ME-01] 上传意图与直传",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/40"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/40"
   },
   "ME-02": {
     "number": 41,
     "title": "[ME-02] 扫描与缩略图",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/41"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/41"
   },
   "ME-03": {
     "number": 42,
     "title": "[ME-03] 资产查询与删除",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/42"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/42"
   },
   "NT-01": {
     "number": 43,
     "title": "[NT-01] 通知表与列表",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/43"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/43"
   },
   "NT-02": {
     "number": 44,
     "title": "[NT-02] 审核结果通知",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/44"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/44"
   },
   "PL-01": {
     "number": 33,
     "title": "[PL-01] 行程模型与状态",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/33"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/33"
   },
   "PL-02": {
     "number": 34,
     "title": "[PL-02] 输入校验与追问",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/34"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/34"
   },
   "PL-03": {
     "number": 35,
     "title": "[PL-03] 多 Agent 编排骨架",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/35"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/35"
   },
   "PL-04": {
     "number": 36,
     "title": "[PL-04] LLM Adapter",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/36"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/36"
   },
   "PL-05": {
     "number": 37,
     "title": "[PL-05] 异步生成",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/37"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/37"
   },
   "PL-06": {
     "number": 38,
     "title": "[PL-06] 费用估算与标注",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/38"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/38"
   },
   "PL-07": {
     "number": 39,
     "title": "[PL-07] 行程转路线草稿",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/39"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/39"
   },
   "QA-01": {
     "number": 54,
     "title": "[QA-01] 权限负例矩阵",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/54"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/54"
   },
   "QA-02": {
     "number": 55,
     "title": "[QA-02] 主链路 E2E",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/55"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/55"
   },
   "QA-03": {
     "number": 56,
     "title": "[QA-03] 演示数据",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/56"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/56"
   },
   "QA-04": {
     "number": 57,
     "title": "[QA-04] 答辩材料",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/57"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/57"
   },
   "RT-01": {
     "number": 16,
     "title": "[RT-01] 路线草稿 CRUD",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/16"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/16"
   },
   "RT-02": {
     "number": 17,
     "title": "[RT-02] 节点与排序",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/17"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/17"
   },
   "RT-03": {
     "number": 18,
     "title": "[RT-03] 版本快照与 hash",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/18"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/18"
   },
   "RT-04": {
     "number": 19,
     "title": "[RT-04] 费用汇总",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/19"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/19"
   },
   "RT-05": {
     "number": 20,
     "title": "[RT-05] 媒体绑定",
-    "url": "https://github.com/SLP-man/culturalwalk-platform/issues/20"
+    "url": "https://github.com/sit-rhg/culturalwalk-platform/issues/20"
   }
 }
