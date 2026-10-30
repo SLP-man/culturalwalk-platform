@@ -35,6 +35,9 @@ main ──●────────●────────●────
 - 需要 1 个 approve
 - 需要 CI 通过（`backend` / `frontend` / `contract` / `compose` 四个 job）
 - 合并后自动删除分支
+- 这些规则**已经在线上仓库配好**（`sit-rhg/culturalwalk-platform` 的 `main`），不需要谁再去点一遍；组织 owner 的推送可绕过，但**团队一律走 PR**
+
+> 仓库托管在 GitHub 组织 **`sit-rhg`**（显示名 **CulturalWalk**）。组员通过组织邀请或仓库协作者获得写权限；找仓库的位置：头像 → Your organizations → CulturalWalk。
 
 ## 4. 评审清单
 
