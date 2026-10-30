@@ -89,6 +89,11 @@ class Itinerary(Base):
     """一张行程单：用户提交的规划条件 + 当前状态。"""
 
     __tablename__ = "itineraries"
+    __table_args__ = (
+        # 幂等（docs/03 §1.2）：同一个用户拿同一个 Idempotency-Key 只能建出一张行程单。
+        # 靠数据库唯一约束兜底，而不是"先查再写"——两个请求同时进来时只有查是拦不住的。
+        UniqueConstraint("user_id", "idempotency_key", name="uq_itineraries_user_idempotency"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # users 表属于 identity 模块，目前还没建（ID-01 未完成）。
@@ -106,6 +111,11 @@ class Itinerary(Base):
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     visibility: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
     share_token: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    # 幂等相关的两列（PL-02）。通用幂等表还没人认领，先在行程上按 (user_id, key) 去重，
+    # 等有人做通用能力再迁出去；字段本身对业务无意义，删掉不影响行程内容。
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 首次请求体的指纹：同一个 key 换了条件要报 409，不能默默把上次的行程还给他。
+    input_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
