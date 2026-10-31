@@ -2127,6 +2127,11 @@ export interface components {
         Plan: {
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description 本次生成的编号；提交时返回，前端据此轮询与排障
+             */
+            run_id?: string | null;
             /** @enum {string} */
             state: "DRAFT" | "GENERATING" | "READY" | "FAILED";
             city?: string;
