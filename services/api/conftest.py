@@ -21,6 +21,7 @@ from app.main import app
 
 # 触发所有模型 import，create_all 才看得见它们
 from app.modules.audit import models as _audit_models  # noqa: F401
+from app.modules.identity import models as _identity_models  # noqa: F401
 
 ADMIN_ID = "11111111-1111-1111-1111-111111111111"
 USER_ID = "22222222-2222-2222-2222-222222222222"
