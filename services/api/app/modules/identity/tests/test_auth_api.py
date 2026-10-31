@@ -7,11 +7,19 @@
 
 from __future__ import annotations
 
+import uuid
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.deps import create_access_token
+from app.core.errors import Conflict
+from app.modules.identity.models import STATUS_DISABLED, User
 from app.modules.identity.models import Session as LoginSession
+from app.modules.identity.repository import IdentityRepository
+from app.modules.identity.service import IdentityService
 
 REGISTER = "/api/v1/auth/register"
 LOGIN = "/api/v1/auth/login"
@@ -30,6 +38,11 @@ def _register(client: TestClient, username: str = "Ming", password: str = PASSWO
 
 def _bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _precheck_missed(self: IdentityRepository, username: str) -> User | None:
+    """模拟注册竞态：预检那一刻另一个请求还没提交，所以什么都没查到。"""
+    return None
 
 
 def test_register_returns_token_pair(client: TestClient) -> None:
@@ -158,3 +171,52 @@ def test_session_stores_hash_not_plaintext(client: TestClient, db_session: Sessi
     assert len(row.refresh_hash) == 64, "sha256 十六进制"
     assert row.revoked_at is None
     assert row.expires_at is not None
+
+
+def test_me_rejects_token_for_missing_user(client: TestClient) -> None:
+    """幽灵令牌：签名有效但库里没有这个用户，不许发一份"资料"出去。"""
+    token = create_access_token(user_id=str(uuid.uuid4()), username="ghost", role="user")
+    resp = client.get(ME, headers=_bearer(token))
+
+    assert resp.status_code == 401, resp.text
+    assert resp.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_me_rejects_disabled_user(client: TestClient, db_session: Session) -> None:
+    """账号被停用后，还没过期的旧 access 令牌也不能再用。"""
+    tokens = _register(client, username="ming")
+    row = db_session.scalar(select(User).where(User.username == "ming"))
+    assert row is not None
+    row.status = STATUS_DISABLED
+    db_session.flush()
+
+    resp = client.get(ME, headers=_bearer(tokens["access_token"]))
+
+    assert resp.status_code == 401, resp.text
+    assert resp.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_register_race_over_http_is_conflict(
+    client: TestClient, db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """并发同名：预检没查到、落库时唯一索引炸 —— 必须 409，不能 500。"""
+    db_session.add(User(username="ming", password_hash="irrelevant", role="user", status="active"))
+    db_session.flush()
+    monkeypatch.setattr(IdentityRepository, "get_user_by_username", _precheck_missed)
+
+    resp = client.post(REGISTER, json={"username": "ming", "password": PASSWORD})
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["error"]["code"] == "CONFLICT"
+
+
+def test_service_register_race_raises_conflict(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """同一竞态在 service 层直接断言：抛的是 AppError 子类，不是裸 IntegrityError。"""
+    db_session.add(User(username="ming", password_hash="irrelevant", role="user", status="active"))
+    db_session.flush()
+    monkeypatch.setattr(IdentityRepository, "get_user_by_username", _precheck_missed)
+
+    with pytest.raises(Conflict):
+        IdentityService(db_session).register(username="MING", password=PASSWORD)

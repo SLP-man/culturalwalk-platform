@@ -22,6 +22,7 @@ from typing import Any
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 from jose import JWTError, jwt
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -110,15 +111,21 @@ class IdentityService:
         name = _normalize_username(username)
         if self.repo.get_user_by_username(name) is not None:
             raise Conflict("这个用户名已经被注册了")
-        user = self.repo.add_user(
-            User(
-                username=name,
-                email=_normalize_email(email),
-                password_hash=hash_password(password),
-                role=ROLE_USER,
-                status=STATUS_ACTIVE,
+        try:
+            user = self.repo.add_user(
+                User(
+                    username=name,
+                    email=_normalize_email(email),
+                    password_hash=hash_password(password),
+                    role=ROLE_USER,
+                    status=STATUS_ACTIVE,
+                )
             )
-        )
+        except IntegrityError as exc:
+            # 预检与落库之间有间隙：另一个请求同时注册同名时，uq_users_username_lower 会在这里炸。
+            # 先回滚把会话修好（否则这条连接上的后续查询全废），再翻成契约里的 409。
+            self.db.rollback()
+            raise Conflict("这个用户名已经被注册了") from exc
         return self._issue(user)
 
     def login(self, *, username: str, password: str) -> IssuedTokens:
@@ -168,6 +175,17 @@ class IdentityService:
 
     def get_user(self, user_id: uuid.UUID) -> User | None:
         return self.repo.get_user(user_id)
+
+    def require_active_user(self, user_id: uuid.UUID) -> User:
+        """已登录但库里没有这行、或状态不是 active：一律按登录失效处理。
+
+        /users/me 的契约只有 200/401，所以账号被删、被停用都走 401，
+        既不给幽灵令牌发资料，也不把"这个 id 存在过"透出去。
+        """
+        user = self.repo.get_user(user_id)
+        if user is None or user.status != STATUS_ACTIVE:
+            raise Unauthorized("登录已失效，请重新登录")
+        return user
 
     # ===== 内部 =====
     def _issue(self, user: User) -> IssuedTokens:

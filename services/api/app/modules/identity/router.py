@@ -85,12 +85,8 @@ def logout(user: CurrentUserDep, db: DbDep, payload: LogoutIn | None = None) -> 
 
 @users_router.get("/me", response_model=UserOut, summary="当前用户")
 def me(user: CurrentUserDep, db: DbDep) -> UserOut:
-    found = IdentityService(db).get_user(_user_id_of(user))
-    if found is not None:
-        return UserOut.model_validate(found)
-    # 骨架期 conftest 的 user_headers 直接拿 create_access_token 造令牌，库里并没有这行用户；
-    # 查不到就按令牌声明返回必填字段（bio/created_at 留空），不把已登录的人打成 404。
-    return UserOut(id=_user_id_of(user), username=user.username, role=user.role)
+    # 库里没有这行、或账号已停用，都抛 Unauthorized：令牌有效不代表这个身份还在。
+    return UserOut.model_validate(IdentityService(db).require_active_user(_user_id_of(user)))
 
 
 # ===== 待实现端点（认领任务卡后逐条填） =====
