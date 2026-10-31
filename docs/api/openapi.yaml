@@ -1378,6 +1378,10 @@ components:
       required: [id, state]
       properties:
         id: { type: string, format: uuid }
+        run_id:
+          type: [string, "null"]
+          format: uuid
+          description: 本次生成的编号；提交时返回，前端据此轮询与排障
         state: { type: string, enum: [DRAFT, GENERATING, READY, FAILED] }
         city: { type: string }
         days: { type: integer }

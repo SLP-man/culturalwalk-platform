@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.modules.planner.models import PlanState
+from app.modules.planner.models import Itinerary, PlanState
 
 
 class DayPart(StrEnum):
@@ -89,11 +89,14 @@ class PlanOut(BaseModel):
     """POST /plans 的 202 响应（契约 Plan）。
 
     只回执"收了、开始生成了"，不含日程：此时 AI 还没跑，回内容只会是假的。
+    run_id 是这次生成的编号：前端拿它判断"我等的还是不是同一份"，
+    运维排障时也靠它把一次请求和后面的四步 agent_steps 串起来。
     """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    run_id: uuid.UUID | None = None
     state: PlanState
     city: str
     days: int
@@ -102,3 +105,48 @@ class PlanOut(BaseModel):
     share_token: str | None = None
     error_code: str | None = None
     created_at: datetime
+
+    @classmethod
+    def from_itinerary(
+        cls,
+        itinerary: Itinerary,
+        *,
+        run_id: uuid.UUID | None = None,
+    ) -> PlanOut:
+        """从行程实体拼出回执。
+
+        不走 model_validate(itinerary)：run_id 在 plan_runs 表上，不在行程上，
+        直接把两个实体的字段拼在一起，比给行程塞一个临时属性干净。
+        """
+        return cls(
+            id=itinerary.id,
+            run_id=run_id,
+            state=itinerary.state,
+            city=itinerary.city,
+            days=itinerary.days,
+            people=itinerary.people,
+            budget_total=itinerary.budget_total,
+            share_token=itinerary.share_token,
+            error_code=itinerary.error_code,
+            created_at=itinerary.created_at,
+        )
+
+
+class PlanStepOut(BaseModel):
+    """一个 Agent 的留痕（契约 PlanDetail.steps）。没跑完的步骤 duration_ms 为空。"""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    agent: str
+    status: str
+    duration_ms: int | None = None
+
+
+class PlanDetailOut(PlanOut):
+    """GET /plans/{plan_id} 的响应（契约 PlanDetail）。
+
+    前端轮询的就是这个：state 变了说明生成有了进展，steps 变长说明跑到第几站了。
+    cost / days_plan 属于 PL-06（费用与日程标注）的范围，没实现前不返回假数据。
+    """
+
+    steps: list[PlanStepOut] = Field(default_factory=list)

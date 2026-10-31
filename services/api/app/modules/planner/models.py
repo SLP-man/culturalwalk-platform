@@ -241,6 +241,9 @@ class AgentStep(Base):
     )
     # 只存输出的 sha256，不存整段 JSON：库里留大块模型输出既脏又贵，
     # 需要复现时按摘要去日志/对象存储里找。
+    # 在流水线里排第几（0 起）。id 是随机 UUID，created_at 只到秒，
+    # 两者都还原不出"先跑调研再排班"的顺序，所以要显式记一个序号。
+    step_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     output_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -248,3 +251,65 @@ class AgentStep(Base):
     )
 
     run: Mapped[PlanRun] = relationship(back_populates="steps")
+
+
+class JobState(StrEnum):
+    """后台任务自己的生命周期，和行程状态分开记。
+
+    两套状态是两种事实：行程「生成中」可能对应任务「排队中」或「运行中」；
+    任务重试第三次时行程状态根本没变。混成一套，就没法回答「是谁卡住了」。
+    """
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    DONE = "DONE"
+    FAILED = "FAILED"
+
+
+class PlanJob(Base):
+    """一次生成对应的一条后台任务（PL-05：任务表 + worker 轮询）。
+
+    用数据库当队列，不引 Redis：这个量级一秒查几次库毫无压力，却少一个要运维的组件。
+    领活用 `FOR UPDATE SKIP LOCKED`，两个 worker 不会抢到同一条任务；
+    `lease_until` 是「我以为我还在干」的租约，worker 崩了租约过期，任务能被别人捡走。
+    """
+
+    __tablename__ = "plan_jobs"
+    __table_args__ = (
+        # 一次生成只排一条任务：重复入队等于让同一份行程被跑两遍。
+        UniqueConstraint("run_id", name="uq_plan_jobs_run"),
+        # worker 的轮询查询永远带着这两个条件，组合索引正好覆盖。
+        Index("ix_plan_jobs_state_available", "state", "available_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("plan_runs.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    itinerary_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("itineraries.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    state: Mapped[JobState] = mapped_column(
+        _stored_enum(JobState, length=16), nullable=False, default=JobState.PENDING
+    )
+    # 已经领过几次。超过上限就不再重试，直接判失败——否则一条毒任务会永远占着 worker。
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # 什么时候可以被领。失败退避、限流都靠它，不需要额外字段。
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 领活的是哪个 worker（主机名/进程名），排查「任务卡在谁手里」时全靠它。
+    claimed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # 最后一次失败原因，截断到 200 字：完整堆栈进日志，库里只留能定位的一句。
+    last_error: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    run: Mapped[PlanRun] = relationship()
+    itinerary: Mapped[Itinerary] = relationship()

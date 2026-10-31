@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import CurrentUser, CurrentUserDep
 from app.core.errors import Unauthorized
-from app.modules.planner.schemas import PlanIn, PlanOut
+from app.modules.planner.schemas import PlanDetailOut, PlanIn, PlanOut, PlanStepOut
 from app.modules.planner.service import PlannerService
 
 router = APIRouter(prefix="/plans", tags=["plans"])
@@ -45,22 +45,43 @@ def create_plan(
     user: CurrentUserDep,
     db: Annotated[Session, Depends(get_db)],
 ) -> PlanOut:
-    """收下条件，建行程并开始生成，立刻返回 202 回执。
+    """收下条件，建行程并排队生成，立刻返回 202 回执。
 
     真正生成要十几秒，不能挂在这次请求里等——用户会以为页面卡死，
-    所以这里只回"已接受 + 行程编号"，前端凭 id 轮询 GET /plans/{id}。
+    所以这里只回"已接受 + 行程编号 + 本次生成编号"，
+    前端凭 id 轮询 GET /plans/{id} 看进度。
     """
-    itinerary = PlannerService(db).create_plan(
+    created = PlannerService(db).create_plan(
         user_id=_user_uuid(user),
         payload=payload,
         idempotency_key=idempotency_key,
     )
-    return PlanOut.model_validate(itinerary)
+    return PlanOut.from_itinerary(created.itinerary, run_id=created.run.id)
+
+
+@router.get(
+    "/{plan_id}",
+    response_model=PlanDetailOut,
+    summary="行程详情（含步骤进度）",
+)
+def get_plan(
+    plan_id: uuid.UUID,
+    user: CurrentUserDep,
+    db: Annotated[Session, Depends(get_db)],
+) -> PlanDetailOut:
+    """取一张行程的当前状态与步骤留痕——前端轮询的就是这个接口。
+
+    steps 按执行顺序返回：前端据此显示"已经跑完调研、正在排日程"，
+    而不是干等一个转圈。
+    """
+    itinerary, run, steps = PlannerService(db).get_detail(user_id=_user_uuid(user), plan_id=plan_id)
+    detail = PlanDetailOut.from_itinerary(itinerary, run_id=run.id if run is not None else None)
+    detail.steps = [PlanStepOut.model_validate(step) for step in steps]
+    return detail
 
 
 # ===== 待实现端点（认领任务卡后逐条填） =====
 #   GET    /plans                                           我的行程列表
-#   GET    /plans/{plan_id}                                 行程详情（含步骤进度）
 #   DELETE /plans/{plan_id}                                 删除行程
 #   POST   /plans/{plan_id}/to-draft                        行程转路线草稿
 
