@@ -50,6 +50,8 @@ class StepRecord:
     duration_ms: int
     output_digest: str | None = None
     error: str | None = None
+    # 这一步是不是靠兜底完成的（LLM 不可用 → fake 的固定结果）。
+    degraded: bool = False
 
 
 @dataclass
@@ -65,6 +67,11 @@ class RunResult:
     @property
     def failed_step(self) -> StepRecord | None:
         return next((step for step in self.steps if step.status is AgentStepStatus.FAILED), None)
+
+    @property
+    def degraded(self) -> bool:
+        """整条流水线里有没有任何一步用了兜底结果。"""
+        return any(step.degraded for step in self.steps)
 
 
 class Orchestrator:
@@ -102,6 +109,7 @@ class Orchestrator:
                         status=AgentStepStatus.FAILED,
                         duration_ms=_elapsed_ms(started),
                         error=f"{type(exc).__name__}: {exc}"[:ERROR_PREVIEW_CHARS],
+                        degraded=ctx.llm_degraded,
                     )
                 )
                 return RunResult(
@@ -117,6 +125,7 @@ class Orchestrator:
                     status=AgentStepStatus.DONE,
                     duration_ms=_elapsed_ms(started),
                     output_digest=context_digest(ctx),
+                    degraded=ctx.llm_degraded,
                 )
             )
         return RunResult(ok=True, context=ctx, steps=steps)

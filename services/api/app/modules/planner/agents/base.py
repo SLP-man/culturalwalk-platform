@@ -47,6 +47,10 @@ class PlanContext:
     schedule: list[dict[str, object]] = field(default_factory=list)
     issues: list[dict[str, object]] = field(default_factory=list)
     verified: list[dict[str, object]] = field(default_factory=list)
+    # 有岗位用了「降级兜底」（LLM 连不上，退回固定结果）就置 True。
+    # 由 orchestrator 抄进每一步记录，最终体现在 RunResult.degraded 上，
+    # 让上层能区分「模型真算的」和「兜底给的」。
+    llm_degraded: bool = False
 
 
 @runtime_checkable

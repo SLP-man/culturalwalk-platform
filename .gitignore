@@ -45,8 +45,8 @@ tmp/
 *.sqlite3
 
 # ---- 临时安装残留 ----
-pip-unpack-*/
+# pip 安装中途被打断会留下这些目录（名字带随机后缀），是本机垃圾而非项目文件。
+# 它们还有个副作用：权限残缺，`ruff check .` 扫进去会直接报错，别人 clone 后跑不起来。
+pip-*/
+pytest-cache-files-*/
 *.whl
-pip-build-tracker-*/
-pip-ephem-wheel-cache-*/
-pip-install-*/
