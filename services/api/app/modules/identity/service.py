@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import create_access_token
-from app.core.errors import Conflict, Unauthorized
+from app.core.errors import Conflict, NotFound, Unauthorized
 from app.modules.identity.models import (
     ROLE_USER,
     STATUS_ACTIVE,
@@ -36,6 +36,7 @@ from app.modules.identity.models import (
 )
 from app.modules.identity.models import Session as LoginSession
 from app.modules.identity.repository import IdentityRepository
+from app.modules.identity.schemas import RouteSummaryOut, UserOut, UserProfileOut
 
 # 令牌类型：access 由 app.core.deps 校验，refresh 只在本模块校验
 TYP_ACCESS = "access"
@@ -186,6 +187,21 @@ class IdentityService:
         if user is None or user.status != STATUS_ACTIVE:
             raise Unauthorized("登录已失效，请重新登录")
         return user
+
+    def list_published_routes(self, user_id: uuid.UUID) -> list[RouteSummaryOut]:
+        return self.repo.list_published_routes(user_id)
+
+    def public_profile(self, user_id: uuid.UUID) -> UserProfileOut:
+        """公开主页。契约只有 200/404，所以"不存在"和"已停用"都按 404 处理：
+        对外都是同一句话，别让人靠状态码差异去试探某个 id 是否存在过。
+        """
+        user = self.repo.get_user(user_id)
+        if user is None or user.status != STATUS_ACTIVE:
+            raise NotFound("用户不存在")
+        return UserProfileOut(
+            user=UserOut.model_validate(user),
+            published_routes=self.list_published_routes(user.id),
+        )
 
     # ===== 内部 =====
     def _issue(self, user: User) -> IssuedTokens:

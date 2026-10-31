@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.identity.models import Session as LoginSession
 from app.modules.identity.models import User
+from app.modules.identity.schemas import RouteSummaryOut
 
 
 class IdentityRepository:
@@ -24,6 +25,16 @@ class IdentityRepository:
 
     def get_user(self, user_id: uuid.UUID) -> User | None:
         return self.db.get(User, user_id)
+
+    def list_published_routes(self, user_id: uuid.UUID) -> list[RouteSummaryOut]:
+        """某个作者的已发布路线摘要。
+
+        上游表还没落地：routes 模块的 routes / route_versions 要等 RT-01/RT-02
+        （现在 app/modules/routes/models.py 整段还是注释）。所以这里先返回空列表，
+        但签名、出参 DTO 和"只查已发布"的口径已经定死：表落地后只替换本函数体，
+        不改调用方、不改契约。别为了让它有返回值去 join 别的模块的表。
+        """
+        return []
 
     def add_user(self, user: User) -> User:
         self.db.add(user)

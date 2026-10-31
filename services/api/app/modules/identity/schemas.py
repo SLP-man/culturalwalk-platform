@@ -73,3 +73,51 @@ class TokenPairOut(BaseModel):
     refresh_token: str
     expires_in: int
     user: UserOut
+
+
+class RouteAuthorOut(BaseModel):
+    """openapi.yaml#RouteSummary.author（内联对象，两个字段都没有 required）。"""
+
+    id: uuid.UUID | None = None
+    username: str | None = None
+
+
+class CostSummaryOut(BaseModel):
+    """openapi.yaml#CostSummary。契约里一个字段都不是 required。"""
+
+    min_total: int | None = None
+    max_total: int | None = None
+    currency: str | None = None
+    unknown_count: int | None = None
+
+
+class RouteSummaryOut(BaseModel):
+    """openapi.yaml#RouteSummary。required 只有 id / title / channel。
+
+    只有 summary / cover_url / duration_minutes 在契约里是 nullable，
+    其余可选字段给非空默认值：宁可少给一个字段，也别回一个契约里没有的 null。
+    """
+
+    id: uuid.UUID
+    title: str
+    channel: str
+    summary: str | None = None
+    cover_url: str | None = None
+    author: RouteAuthorOut | None = None
+    theme_tags: list[str] = Field(default_factory=list)
+    duration_minutes: int | None = None
+    cost: CostSummaryOut | None = None
+    comment_count: int = 0
+    favorite_count: int = 0
+
+
+class UserProfileOut(BaseModel):
+    """openapi.yaml#UserProfile。required 只有 user 与 published_routes。
+
+    comment_count 现在给不出真值：评论表还没落地。未知就不出现
+    （路由上用了 response_model_exclude_none），不要回"0 条评论"这种假数据。
+    """
+
+    user: UserOut
+    published_routes: list[RouteSummaryOut]
+    comment_count: int | None = None

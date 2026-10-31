@@ -20,6 +20,7 @@ from app.modules.identity.schemas import (
     RegisterIn,
     TokenPairOut,
     UserOut,
+    UserProfileOut,
 )
 from app.modules.identity.service import IdentityService, IssuedTokens
 
@@ -89,5 +90,13 @@ def me(user: CurrentUserDep, db: DbDep) -> UserOut:
     return UserOut.model_validate(IdentityService(db).require_active_user(_user_id_of(user)))
 
 
-# ===== 待实现端点（认领任务卡后逐条填） =====
-#   GET    /users/{user_id}/profile                         用户公开主页（公开，ID-04）
+@users_router.get(
+    "/{user_id}/profile",
+    response_model=UserProfileOut,
+    # 契约里这些可选字段都不是 nullable：拿不到值就整个不出现，别回 null
+    response_model_exclude_none=True,
+    summary="用户公开主页",
+)
+def profile(user_id: uuid.UUID, db: DbDep) -> UserProfileOut:
+    # 契约写的是 security: []，所以这里一个令牌依赖都不挂：匿名也要能看。
+    return IdentityService(db).public_profile(user_id)
