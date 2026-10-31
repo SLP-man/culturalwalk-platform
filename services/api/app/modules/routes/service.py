@@ -1,8 +1,8 @@
 # 路线与版本 · 业务规则
 """本模块唯一允许写业务判断的地方，router 只做编解码与依赖注入。
 
-拥有数据：routes、route_drafts（RT-01）；route_nodes / route_versions 属 RT-02 / RT-03。
-明确不做：审核、发布、AI 生成——本卡只到"草稿能增删改查"为止。
+拥有数据：routes、route_drafts（RT-01）、route_nodes（RT-02）；
+route_versions 属 RT-03。明确不做：审核、发布、AI 生成——只到"草稿能增删改查"为止。
 
 存储归属（docs/02 §2.3）：草稿的 title / summary / theme_tags / duration_minutes 落在
 routes 行，route_drafts 只管 state / lock_version / 所有权。所以每次改内容都要顺手
@@ -35,6 +35,7 @@ from app.modules.routes.models import (
     Route,
     RouteChannel,
     RouteDraft,
+    RouteNode,
     RouteStatus,
 )
 from app.modules.routes.repository import RoutesRepository
@@ -44,6 +45,9 @@ from app.modules.routes.schemas import (
     RouteDraftOut,
     RouteDraftPageOut,
     RouteDraftPatch,
+    RouteNodeInput,
+    RouteNodeOut,
+    RouteNodesPut,
 )
 
 DEFAULT_LIMIT: Final[int] = 20
@@ -126,6 +130,47 @@ def _to_out(draft: RouteDraft, route: Route) -> RouteDraftOut:
         # SQLite 取回来是 naive，统一补 UTC：否则 POST 响应的 updated_at 带 Z、
         # GET 回来的却不带，前端同一个字段要写两套解析。
         updated_at=_as_utc(draft.updated_at),
+    )
+
+
+def _to_node_out(node: RouteNode) -> RouteNodeOut:
+    """把 route_nodes 行拼成契约里的节点。
+
+    place 恒传 None：places 表（CA-01/CA-03）还不存在，编 name/lat/lon 出来就是
+    造假数据。router 上的 response_model_exclude_none 会让这个键整个不出现，
+    客户端此刻只拿 place_id。
+    """
+    return RouteNodeOut(
+        position=node.position,
+        place_id=node.place_id,
+        place=None,
+        stay_minutes=node.stay_minutes,
+        transport=node.transport,
+        note=node.note,
+        price_min=node.price_min,
+        price_max=node.price_max,
+    )
+
+
+def _build_node(
+    draft_id: uuid.UUID, position: int, item: RouteNodeInput, now: datetime
+) -> RouteNode:
+    """按"请求数组下标 = position"建一行。
+
+    media_asset_ids 故意不落库（媒体绑定属 RT-05）：现在存下来只会变成一批
+    指向不存在资产的悬空 UUID。它仍然在输入模型里，所以客户端多传不会被 422。
+    """
+    return RouteNode(
+        draft_id=draft_id,
+        place_id=item.place_id,
+        position=position,
+        stay_minutes=item.stay_minutes,
+        transport=item.transport,
+        note=item.note,
+        price_min=item.price_min,
+        price_max=item.price_max,
+        created_at=now,
+        updated_at=now,
     )
 
 
@@ -220,6 +265,46 @@ class RoutesService:
         self.db.flush()
         return _to_out(draft, route)
 
+    def replace_nodes(
+        self,
+        *,
+        owner_id: uuid.UUID,
+        draft_id: uuid.UUID,
+        payload: RouteNodesPut,
+        lock_version: int,
+    ) -> RouteDraftDetailOut:
+        """整表替换草稿的节点顺序：删光旧行，再按请求数组下标重写 position=0..n-1。
+
+        为什么是整表替换而不是逐条 diff：节点没有稳定身份——同一个 place_id 可以
+        合法地出现两次（一趟走两遍同一个地点）。没有身份就没法回答"这条是不是原来
+        那条"，diff 出来的结果与整表替换完全等价，代码却多一倍，还多一处可能算错
+        的地方。
+
+        校验顺序按契约固定为 404 → 403 → 409 → 412：先确认这份草稿存在且是你的，
+        再确认它当前能改，最后才比版本号。锁定态下即使版本号是最新的也改不了，
+        这时回 412 只会诱使客户端"再取一次版本号重试"，白跑一轮。
+        """
+        draft, route = self._load_owned(owner_id=owner_id, draft_id=draft_id)
+        self._ensure_editing(draft)
+        if lock_version != draft.lock_version:
+            raise PreconditionFailed(
+                f"草稿版本已变化（当前 {draft.lock_version}，请求 {lock_version}），请刷新后重试"
+            )
+        now = datetime.now(UTC)
+        # 先删后写，中间不要 flush 别的东西：整表替换要么整份生效要么一行都不动。
+        self.repo.delete_nodes(draft.id)
+        self.repo.add_nodes(
+            [
+                _build_node(draft.id, position, item, now)
+                for position, item in enumerate(payload.nodes)
+            ]
+        )
+        draft.lock_version += 1
+        draft.updated_at = now
+        route.updated_at = now
+        self.db.flush()
+        return self._to_detail(draft, route)
+
     def delete_draft(self, *, owner_id: uuid.UUID, draft_id: uuid.UUID) -> None:
         """删草稿。只有 EDITING 且从未发布过的草稿能删（docs/02 §3.1）。"""
         draft, route = self._load_owned(owner_id=owner_id, draft_id=draft_id)
@@ -249,10 +334,9 @@ class RoutesService:
         )
 
     def get_detail(self, *, owner_id: uuid.UUID, draft_id: uuid.UUID) -> RouteDraftDetailOut:
-        """详情。nodes 恒为 []（节点属 RT-02），cost 留空不下发。"""
+        """详情。nodes 按 position 升序真实返回（RT-02），cost 属 RT-04 仍留空不下发。"""
         draft, route = self._load_owned(owner_id=owner_id, draft_id=draft_id)
-        base = _to_out(draft, route)
-        return RouteDraftDetailOut(**base.model_dump(), nodes=[], cost=None)
+        return self._to_detail(draft, route)
 
     # ---------- 内部 ----------
 
@@ -290,6 +374,12 @@ class RoutesService:
             if value is None and field not in _NULLABLE_FIELDS:
                 continue
             setattr(route, field, list(value) if field == "theme_tags" else value)
+
+    def _to_detail(self, draft: RouteDraft, route: Route) -> RouteDraftDetailOut:
+        """GET 详情与 PUT 节点共用：一条查询取回全部节点，按 position 升序。"""
+        base = _to_out(draft, route)
+        nodes = [_to_node_out(node) for node in self.repo.list_nodes(draft.id)]
+        return RouteDraftDetailOut(**base.model_dump(), nodes=nodes, cost=None)
 
     def _to_out_loaded(self, draft: RouteDraft) -> RouteDraftOut:
         """刚建好的草稿：routes 行在同一个事务里，直接按 id 取回来拼响应。"""

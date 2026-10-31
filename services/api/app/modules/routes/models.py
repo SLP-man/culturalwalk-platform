@@ -1,8 +1,8 @@
 # 路线与版本 · ORM 模型
 """表结构以 docs/02-数据模型与状态机.md §2.3 为准。
 
-RT-01 只建 routes 与 route_drafts 两张表：route_nodes（RT-02）与 route_versions
-（RT-03）不属于本卡，建在各自卡片的迁移里，这里不提前占位——先建空表等于先猜契约。
+RT-01 建 routes 与 route_drafts，RT-02 补 route_nodes；route_versions 属 RT-03，
+仍由那张卡自己的迁移建，这里不提前占位——先建空表等于先猜契约。
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -51,6 +52,16 @@ class DraftState(StrEnum):
     SUBMITTED_LOCKED = "SUBMITTED_LOCKED"
     APPROVED_LOCKED = "APPROVED_LOCKED"
     ARCHIVED = "ARCHIVED"
+
+
+class RouteTransport(StrEnum):
+    """节点间怎么去下一站，取值与 openapi.yaml 的 RouteNodeInput.transport 逐字一致。"""
+
+    WALK = "walk"
+    METRO = "metro"
+    BUS = "bus"
+    TAXI = "taxi"
+    BIKE = "bike"
 
 
 def _enum_values(py_enum: type[StrEnum]) -> list[str]:
@@ -152,6 +163,52 @@ class RouteDraft(Base):
     # request_hash 是首次请求体的指纹，同一个 key 换了内容要报 409 而不是悄悄重放。
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+
+class RouteNode(Base):
+    """草稿里的一站：去哪（place_id）、待多久、怎么去下一站、花了多少钱。
+
+    position 是顺序的唯一真值，由服务端按请求数组下标写成 0..n-1，客户端不传也不能
+    传（见 schemas.RouteNodeInput）。额外挂 (draft_id, position) 唯一约束，是因为
+    "两个节点抢同一个位置"属于写入逻辑算错下标，必须在数据库层面当场炸掉，
+    而不是留一份顺序取决于插入时机的草稿。
+
+    place_id 跨模块只存裸 UUID、不建外键：places 表属 #12 CA-01 / #14 CA-03，
+    到现在还不存在。media_asset_ids 也不落库——媒体绑定属 RT-05，现在存下来
+    只会变成一批指向不存在资产的悬空 UUID。
+    """
+
+    __tablename__ = "route_nodes"
+    __table_args__ = (
+        Index("ix_route_nodes_draft_position", "draft_id", "position"),
+        UniqueConstraint("draft_id", "position", name="uq_route_nodes_draft_position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    draft_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("route_drafts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    place_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    stay_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 契约里 transport 是可选的，列却是 NOT NULL：缺省走 walk（这产品本来就是"走"城的）。
+    transport: Mapped[RouteTransport] = mapped_column(
+        _stored_enum(RouteTransport, length=16),
+        nullable=False,
+        default=RouteTransport.WALK,
+    )
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 单位：分。契约里两个都可空，null 表示"这段路不知道要多少钱"。
+    price_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

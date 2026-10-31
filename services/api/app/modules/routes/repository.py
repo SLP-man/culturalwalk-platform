@@ -6,10 +6,10 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.orm import Session
 
-from app.modules.routes.models import Route, RouteDraft
+from app.modules.routes.models import Route, RouteDraft, RouteNode
 
 
 class RoutesRepository:
@@ -30,6 +30,21 @@ class RoutesRepository:
         self.db.flush()
         return draft
 
+    def delete_nodes(self, draft_id: uuid.UUID) -> None:
+        """整表替换的前半步：一条语句删光这份草稿的节点，立刻发到数据库。
+
+        用 bulk delete 而不是逐个 db.delete()：ORM 的一次 flush 会先发插入再发删除，
+        而 (draft_id, position) 上有唯一约束，新行会撞上此刻还没删掉的旧行。
+        走 SQL 语句则先删干净，顺序是确定的。
+        """
+        self.db.execute(delete(RouteNode).where(RouteNode.draft_id == draft_id))
+
+    def add_nodes(self, nodes: list[RouteNode]) -> list[RouteNode]:
+        """落一批节点。position 由 service 按下标写好，这里只管写库。"""
+        self.db.add_all(nodes)
+        self.db.flush()
+        return nodes
+
     def delete_draft(self, draft: RouteDraft) -> None:
         self.db.delete(draft)
 
@@ -43,6 +58,15 @@ class RoutesRepository:
 
     def get_route(self, route_id: uuid.UUID) -> Route | None:
         return self.db.get(Route, route_id)
+
+    def list_nodes(self, draft_id: uuid.UUID) -> list[RouteNode]:
+        """按 position 升序取全部节点。顺序的唯一真值就是这一列，不靠插入顺序。"""
+        stmt = (
+            select(RouteNode)
+            .where(RouteNode.draft_id == draft_id)
+            .order_by(RouteNode.position.asc())
+        )
+        return list(self.db.scalars(stmt))
 
     def get_by_idempotency_key(
         self, *, owner_id: uuid.UUID, idempotency_key: str

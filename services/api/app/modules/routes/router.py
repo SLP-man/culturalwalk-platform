@@ -20,6 +20,7 @@ from app.modules.routes.schemas import (
     RouteDraftOut,
     RouteDraftPageOut,
     RouteDraftPatch,
+    RouteNodesPut,
 )
 from app.modules.routes.service import DEFAULT_LIMIT, MAX_LIMIT, RoutesService
 
@@ -35,8 +36,7 @@ def _user_uuid(user: CurrentUser) -> uuid.UUID:
         raise Unauthorized("登录信息已失效，请重新登录") from exc
 
 
-# 本卡以后要补的端点（属 RT-02 / RT-03，现在不挂空 stub）：
-#   PUT    /route-drafts/{draft_id}/nodes      整表替换节点顺序
+# 以后要补的端点（属 RT-03，现在不挂空 stub）：
 #   POST   /route-drafts/{draft_id}/submit     提交审核（冻结版本，单事务）
 #   POST   /route-drafts/{draft_id}/withdraw   撤回投稿
 
@@ -95,6 +95,29 @@ def update_route_draft(
     # PATCH 后的新版本号必须回给客户端，否则它下一次改还得先 GET 一趟。
     response.headers["ETag"] = f'"{draft.lock_version}"'
     return draft
+
+
+@router.put(
+    "/{draft_id}/nodes", response_model=RouteDraftDetailOut, response_model_exclude_none=True
+)
+def replace_route_nodes(
+    db: DbDep,
+    user: CurrentUserDep,
+    draft_id: uuid.UUID,
+    payload: RouteNodesPut,
+    response: Response,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=64)],
+    if_match: Annotated[int, Header(alias="If-Match", ge=1, description="草稿当前的 lock_version")],
+) -> RouteDraftDetailOut:
+    """整表替换节点顺序。If-Match 必须等于当前 lock_version，成功后回新的 ETag。"""
+    # 幂等键只校验必填、不做重放（与 RT-01 一致）：If-Match 已经把重放挡成 412，
+    # 再存一份 key→响应 等于给"节点整表替换"多加一条要维护的真相。
+    detail = RoutesService(db).replace_nodes(
+        owner_id=_user_uuid(user), draft_id=draft_id, payload=payload, lock_version=if_match
+    )
+    # 与 PATCH 一致：不回新版本号，客户端下一次改还得先 GET 一趟。
+    response.headers["ETag"] = f'"{detail.lock_version}"'
+    return detail
 
 
 @router.delete("/{draft_id}", status_code=204)
