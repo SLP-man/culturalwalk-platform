@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 
 import pytest
@@ -22,9 +23,37 @@ from app.main import app
 # 触发所有模型 import，create_all 才看得见它们
 from app.modules.audit import models as _audit_models  # noqa: F401
 from app.modules.identity import models as _identity_models  # noqa: F401
+from app.modules.identity.models import ROLE_ADMIN, ROLE_USER, STATUS_ACTIVE, User
+from app.modules.identity.service import hash_password
 
 ADMIN_ID = "11111111-1111-1111-1111-111111111111"
 USER_ID = "22222222-2222-2222-2222-222222222222"
+
+# argon2 摘要只算一次：夹具要种真账号，每次重算白等 50ms × 用例数
+_FIXTURE_PASSWORD_HASH = hash_password("password123")
+
+
+def _seed_users(session: Session) -> None:
+    """/users/me 要求库里真有这一行且 status=active，所以固定令牌不能再是幽灵身份。"""
+    session.add_all(
+        [
+            User(
+                id=uuid.UUID(ADMIN_ID),
+                username="boss",
+                password_hash=_FIXTURE_PASSWORD_HASH,
+                role=ROLE_ADMIN,
+                status=STATUS_ACTIVE,
+            ),
+            User(
+                id=uuid.UUID(USER_ID),
+                username="xiaoming",
+                password_hash=_FIXTURE_PASSWORD_HASH,
+                role=ROLE_USER,
+                status=STATUS_ACTIVE,
+            ),
+        ]
+    )
+    session.commit()
 
 
 @pytest.fixture()
@@ -38,6 +67,7 @@ def db_session() -> Iterator[Session]:
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session = factory()
     try:
+        _seed_users(session)
         yield session
     finally:
         session.close()
