@@ -1,8 +1,10 @@
 # CulturalWalk API · 认证与依赖
-"""鉴权只在这里做。router 里只允许 `user = Depends(require_user)` 这一种写法。"""
+"""鉴权只在这里做。router 里只允许 `user = Depends(require_user)` 或
+`Depends(require_role("admin", ...))` 这几种写法。"""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -71,12 +73,38 @@ def require_user(
     return user
 
 
-def require_admin(
-    user: Annotated[CurrentUser, Depends(require_user)],
-) -> CurrentUser:
-    if not user.is_admin():
-        raise Forbidden("需要管理员权限")
-    return user
+_ROLE_LABELS = {"admin": "管理员", "editor": "编辑"}
+
+
+def _forbidden_message(allowed: frozenset[str]) -> str:
+    if not allowed:
+        return "接口未配置可访问角色，已默认拒绝"
+    labels = "、".join(_ROLE_LABELS.get(role, role) for role in sorted(allowed))
+    return f"需要{labels}权限"
+
+
+def require_role(*allowed_roles: str) -> Callable[..., CurrentUser]:
+    """角色依赖工厂：`require_role("admin", "editor")` 生成一个能直接 Depends 的依赖。
+
+    用法（角色判断只写在这里，router 里不许再写 if）::
+
+        AdminDep = Annotated[CurrentUser, Depends(require_role("admin", "editor"))]
+
+    不传角色按 fail-closed 处理：谁都进不去（403）。漏写一个角色参数应该是"门关死了"
+    而不是"门全开了"，而且失败方向是看得见的 403，比 import 期抛异常更难被忽略。
+    """
+    allowed = frozenset(allowed_roles)
+
+    def dependency(user: Annotated[CurrentUser, Depends(require_user)]) -> CurrentUser:
+        if user.role not in allowed:
+            raise Forbidden(_forbidden_message(allowed))
+        return user
+
+    return dependency
+
+
+# 历史别名：admin 与 editor 都能进管理端（沿用 is_admin 的既有口径，行为不变）
+require_admin = require_role("admin", "editor")
 
 
 CurrentUserDep = Annotated[CurrentUser, Depends(require_user)]
